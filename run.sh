@@ -20,16 +20,20 @@ git log --pretty=tformat:%H --topo-order > /tmp/change_sha1.txt
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter "python3 $main_folder_scripts/rewrite.py"
 
 # remove all the files, except the modules we want to keep
-FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --prune-empty --index-filter 'git ls-tree -r --name-only --full-tree $GIT_COMMIT | \
-  grep -v "^plugins/modules/'$module_to_migrate'*" | \
-  grep -v "^tests/integration/targets/'$module_to_migrate'*" | \
-  xargs git rm --cached --ignore-unmatch -r -f' -- HEAD
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -type f -not -path '*cloudtrail*' -and -not -path './.git/*' -delete"
+# also remove the documentation and changelog related files.
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -name '*.rst' -type f -delete"
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -name '*.yml' -type f -delete"
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -name '*.yaml' -type f -delete"
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -type l -delete"
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --prune-empty --tag-name-filter cat
 
 # generate the patch files
 git format-patch -10000 promote_$module_to_migrate
 
 # apply the patch files
 cd ${a_a_path}
+git am --abort || true
 git checkout -B promote_$module_to_migrate origin/main
 git am ${c_a_path}/*.patch
 
@@ -38,9 +42,10 @@ git checkout origin/main
 git branch -D promote_$module_to_migrate
 git checkout -B promote_$module_to_migrate origin/main
 
-git ls-files -i -x "*${module_to_migrate}*" | git update-index --force-remove --stdin
+git ls-files -c -o -i -x "*${module_to_migrate}*" | git update-index --force-remove --stdin
 git add -u
 git commit -m "Remove modules"
+git clean -ffdx
 
 ${main_folder_scripts}/refresh_ignore_files $module_to_migrate ${c_a_path} ${a_a_path}
 git add tests/sanity/*.txt
