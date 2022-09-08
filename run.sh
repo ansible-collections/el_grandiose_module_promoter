@@ -20,7 +20,7 @@ git log --pretty=tformat:%H --topo-order > /tmp/change_sha1.txt
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter "python3 $main_folder_scripts/rewrite.py"
 
 # remove all the files, except the modules we want to keep
-FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -type f -not -path '*cloudtrail*' -and -not -path './.git/*' -delete"
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -type f -not -path '*$module_to_migrate*' -and -not -path './.git/*' -delete"
 # also remove the documentation and changelog related files.
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -name '*.rst' -type f -delete"
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter "find . -name '*.yml' -type f -delete"
