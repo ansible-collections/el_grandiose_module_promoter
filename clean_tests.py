@@ -33,17 +33,17 @@ def get_files():
 def clean_tests():
     files = get_files()
     for file_path in files:
-        data = load_file(file_path)
-        for d in data:
-            if isinstance(d, dict) and d.get('collections'):
-                try:
-                    d.get('collections').remove(collection_name)
-                except ValueError:
-                    pass
-                if len(d['collections']) == 0:
-                    d.pop('collections')
+        if data := load_file(file_path):
+            for d in data:
+                if isinstance(d, dict) and d.get('collections'):
+                    try:
+                        d.get('collections').remove(collection_name)
+                    except ValueError:
+                        pass
+                    if len(d['collections']) == 0:
+                        d.pop('collections')
 
-        dump_to_file(data, file_path)
+            dump_to_file(data, file_path)
 
 
 clean_tests()
