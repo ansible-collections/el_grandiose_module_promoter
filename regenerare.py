@@ -40,10 +40,9 @@ def update_plugin_routing(data, to_be_migrated):
     for name in to_be_migrated:
         if name in data['plugin_routing']['modules']:
             data['plugin_routing']['modules'].pop(name)
-    
-    for name in to_be_migrated:
-        data['plugin_routing']['modules'][name] = {"redirect": f"amazon.aws.{name}"}
-    
+        else:
+            data['plugin_routing']['modules'][name] = {"redirect": f"amazon.aws.{name}"}
+
     return data
 
 
@@ -86,9 +85,10 @@ def regenerate():
         if module in module_name:
             action_groups_to_be_added.append(module_name)
     
-    for module_name in com_data['plugin_routing']['modules']:
-        if module in module_name:
-            plugin_routing_to_be_added[module_name] = com_data['plugin_routing']['modules'][module_name]
+    for key, value in com_data['plugin_routing']['modules'].items():
+        if module in value.get('redirect'):
+            plugin_routing_to_be_added[key] = com_data['plugin_routing']['modules'][key]
+            com_data['plugin_routing']['modules'].pop(key) 
 
     if action_groups_to_be_added:
         am_data['action_groups']['aws'].extend(action_groups_to_be_added)
@@ -96,7 +96,8 @@ def regenerate():
     
     if plugin_routing_to_be_added:
         am_data['plugin_routing']['modules'].update(plugin_routing_to_be_added)
-        com_data = update_plugin_routing(com_data, action_groups_to_be_added)
+
+    com_data = update_plugin_routing(com_data, action_groups_to_be_added)
     
     ensure_and_dump_meta(com_data, community_path)
     ensure_and_dump_meta(am_data, amazon_path)
