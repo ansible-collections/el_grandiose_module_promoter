@@ -14,3 +14,7 @@ Finally, run the script.
 ```bash
 $ ./run.sh
 ```
+
+## License
+
+GPLv3 or greater.
