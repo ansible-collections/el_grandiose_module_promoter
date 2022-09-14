@@ -9,8 +9,18 @@ a_a_path="amazon.aws collection path"
 
 main_folder_scripts=$(pwd)
 
-
 cd ${c_a_path}
+git checkout origin/main
+git checkout -B update_docs_$module_to_migrate origin/main
+python $main_folder_scripts/update_docs_links.py $module_to_migrate ${c_a_path}
+git add .github/workflows
+git commit -m "Update docs links"
+git push origin update_docs_$module_to_migrate --force
+sleep 10
+python $main_folder_scripts/open_pr_docs_update.py $module_to_migrate update_docs_$module_to_migrate
+
+git checkout origin/main
+
 git checkout -B promote_$module_to_migrate origin/main
 
 # --topo-order to be consistent with git filter-branch behavior
@@ -75,4 +85,4 @@ git commit -m "Add changelog fragment"
 git push origin promote_$module_to_migrate --force
 
 sleep 10
-python $main_folder_scripts/open_pr.py $module_to_migrate promote_$module_to_migrate
+python $main_folder_scripts/open_pr_module_migration.py $module_to_migrate promote_$module_to_migrate
