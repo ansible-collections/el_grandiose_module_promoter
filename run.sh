@@ -62,8 +62,8 @@ python3 $main_folder_scripts/regenerare.py ${c_a_path} ${a_a_path} $module_to_mi
 cd ${a_a_path}
 echo `git add meta/runtime* && git commit -m "Update runtime"`
 
-sed -i '' "s/community.aws.$module_to_migrate/amazon.aws.$module_to_migrate/g" plugins/modules/$module_to_migrate*
-sed -i '' "s/collection_name='community.aws'/collection_name='amazon.aws'/g" plugins/modules/$module_to_migrate*
+sed -i "s/community.aws.$module_to_migrate/amazon.aws.$module_to_migrate/g" plugins/modules/$module_to_migrate*
+sed -i "s/collection_name='community.aws'/collection_name='amazon.aws'/g" plugins/modules/$module_to_migrate*
 git add plugins/modules/$module_to_migrate*
 git commit -m "Update FQDN"
 
