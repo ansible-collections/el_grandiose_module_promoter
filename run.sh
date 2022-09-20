@@ -9,8 +9,16 @@ a_a_path="amazon.aws collection path"
 
 main_folder_scripts=$(pwd)
 
+cd ${a_a_path}
+git clean -ffdx
+git reset --hard
+git am --abort || true
 
 cd ${c_a_path}
+git clean -ffdx
+git reset --hard
+git am --abort || true
+git fetch --all
 git checkout -B promote_$module_to_migrate origin/main
 
 # --topo-order to be consistent with git filter-branch behavior
@@ -30,7 +38,6 @@ git format-patch -10000 promote_$module_to_migrate
 
 # apply the patch files
 cd ${a_a_path}
-git am --abort || true
 git checkout -B promote_$module_to_migrate origin/main
 git am ${c_a_path}/*.patch
 
