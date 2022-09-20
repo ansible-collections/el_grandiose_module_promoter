@@ -32,7 +32,9 @@ git format-patch -10000 promote_$module_to_migrate
 cd ${a_a_path}
 git am --abort || true
 git checkout -B promote_$module_to_migrate origin/main
-git am ${c_a_path}/*.patch
+
+find ${c_a_path} -name '0*.patch'
+find ${c_a_path} -name '0*.patch' -exec git am '{}' \;
 
 cd ${c_a_path}
 git checkout origin/main
@@ -52,9 +54,9 @@ python3 $main_folder_scripts/regenerare.py ${c_a_path} ${a_a_path} $module_to_mi
 cd ${a_a_path}
 echo `git add meta/runtime* && git commit -m "Update runtime"`
 
-sed -i '' "s/community.aws.$module_to_migrate/amazon.aws.$module_to_migrate/g" plugins/modules/$module_to_migrate*
-sed -i '' "s/collection_name='community.aws'/collection_name='amazon.aws'/g" plugins/modules/$module_to_migrate*
-git add plugins/modules/$module_to_migrate*
+find plugins/modules -name "$module_to_migrate*.py" -exec sed -i "s/community.aws.$module_to_migrate/amazon.aws.$module_to_migrate/g" '{}' \;
+find plugins/modules -name "$module_to_migrate*.py" -exec sed -i "s/collection_name='community.aws'/collection_name='amazon.aws'/g" '{}' \;
+find plugins/modules -name "$module_to_migrate*.py" -exec git add '{}' \;
 git commit -m "Update FQDN"
 
 python $main_folder_scripts/clean_tests.py ${a_a_path} $module_to_migrate
