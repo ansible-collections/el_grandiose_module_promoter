@@ -2,6 +2,8 @@ import copy
 import sys
 import os
 
+from pathlib import Path
+
 from utils import dump_to_file
 from utils import load_file
 
@@ -40,10 +42,7 @@ def add_changelog(to_be_migrated):
     changelog_to['major_changes'] = []
     changelog_from['breaking_changes'] = []
 
-    try: 
-        os.makedirs(f"{src_path}/changelogs/fragments") 
-    except OSError as error: 
-        print(error)
+    os.makedirs(f"{community_path}/changelogs/fragments", exist_ok=True)
 
     for module_name in to_be_migrated:
         _module_name = module_name
@@ -59,8 +58,13 @@ def add_changelog(to_be_migrated):
 
 def ensure_and_dump_meta(data, path):
     dump_to_file(data, f"{path}/meta/runtime.yml")
-    os.system(f"sed -i '' '/^ *$/d' {path}/meta/runtime.yml")
-    os.system(f"sed -i '' $'1s/^/---\\\n/' {path}/meta/runtime.yml")
+
+    runtime_file = Path(f"{path}meta/runtime.yml")
+    no_empty_lines = [l for l in runtime_file.read_text().split("\n") if l != ""]
+    content = '\n'.join(no_empty_lines)
+    if not content.startswith("---\n"):
+        content = f"---\n{content}"
+    runtime_file.write_text(content)
 
 
 def regenerate():
