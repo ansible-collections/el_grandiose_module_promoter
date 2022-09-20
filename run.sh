@@ -9,19 +9,26 @@ a_a_path="amazon.aws collection path"
 
 main_folder_scripts=$(pwd)
 
+cd ${a_a_path}
+git clean -ffdx
+git reset --hard
+git am --abort || true
+
 cd ${c_a_path}
-git checkout origin/main
+git clean -ffdx
+git reset --hard
+git am --abort || true
+git fetch --all
+
+cd ${c_a_path}
 git checkout -B update_docs_$module_to_migrate origin/main
 python $main_folder_scripts/update_docs_links.py $module_to_migrate ${c_a_path}
 git add .github/workflows
 git commit -m "Update docs links"
 git push origin update_docs_$module_to_migrate --force
-sleep 10
 python $main_folder_scripts/open_pr_docs_update.py $module_to_migrate update_docs_$module_to_migrate
 
 git checkout origin/main
-
-git checkout -B promote_$module_to_migrate origin/main
 
 # --topo-order to be consistent with git filter-branch behavior
 git log --pretty=tformat:%H --topo-order > /tmp/change_sha1.txt
@@ -40,7 +47,6 @@ git format-patch -10000 promote_$module_to_migrate
 
 # apply the patch files
 cd ${a_a_path}
-git am --abort || true
 git checkout -B promote_$module_to_migrate origin/main
 git am ${c_a_path}/*.patch
 
