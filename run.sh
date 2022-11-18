@@ -43,7 +43,7 @@ git checkout -B promote_$module_to_migrate origin/main
 git log --pretty=tformat:%H --topo-order > /tmp/change_sha1.txt
 
 # add an URL pointing on the original commit in the commit message
-FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter "python3 $main_folder_scripts/rewrite.py"
+FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter "python3 $main_folder_scripts/rewrite.py $src_collection_name"
 
 # remove all the files, except the modules we want to keep
 FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --prune-empty --index-filter 'git ls-tree -r --name-only --full-tree $GIT_COMMIT | \
