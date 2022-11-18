@@ -5,8 +5,8 @@ import ruamel.yaml
 
 
 collection_path = sys.argv[1]
-collection_name = 'amazon.aws'
-module = sys.argv[2]
+collection_name = sys.argv[2]
+module = sys.argv[3]
 
 
 def load_file(path):

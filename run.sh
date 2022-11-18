@@ -4,15 +4,31 @@ set -euo pipefail
 export GITHUB_TOKEN="Token ..."
 export USERNAME="GitHub username"
 module_to_migrate="module name"
-c_a_path="community.aws collection path"
-a_a_path="amazon.aws collection path"
+src_collection_name="srcnamespace.name"
+src_collection_path="community.aws collection path"
+dest_collection_name="destnamespace.name"
+dest_collection_path="amazon.aws collection path"
+
+# quick sanity checks
+if ! [ -d "${src_collection_path}" ]; then
+    printf "ERROR: provided value for src_collection_path is not a directory: ${src_collection_path}\n"
+fi
+if ! [ -d "${dest_collection_path}" ]; then
+    printf "ERROR: provided value for dest_collection_path is not a directory: ${dest_collection_path}\n"
+fi
+if [ -z ${src_collection_name%.*} ]; then
+    printf "ERROR: Collection namespace not found in provided value for src_collection_name: ${src_collection_name}\n"
+fi
+if [ -z ${dest_collection_name%.*} ]; then
+    printf "ERROR: Collection namespace not found in provided value for dest_collection_name: ${dest_collection_name}\n"
+fi
 
 main_folder_scripts=$(pwd)
 
-cd ${c_a_path}
+cd ${src_collection_path}
 git checkout origin/main
 git checkout -B update_docs_$module_to_migrate origin/main
-python $main_folder_scripts/update_docs_links.py $module_to_migrate ${c_a_path}
+python $main_folder_scripts/update_docs_links.py $module_to_migrate ${src_collection_path} ${dest_collection_name}
 git add .github/workflows
 git commit -m "Update docs links"
 git push origin update_docs_$module_to_migrate --force
@@ -39,12 +55,12 @@ FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --prune-empty --index-filte
 git format-patch -10000 promote_$module_to_migrate
 
 # apply the patch files
-cd ${a_a_path}
+cd ${dest_collection_path}
 git am --abort || true
 git checkout -B promote_$module_to_migrate origin/main
-git am ${c_a_path}/*.patch
+git am ${src_collection_path}/*.patch
 
-cd ${c_a_path}
+cd ${src_collection_path}
 git checkout origin/main
 git branch -D promote_$module_to_migrate
 git checkout -B promote_$module_to_migrate origin/main
@@ -54,20 +70,20 @@ git add -u
 git commit -m "Remove modules"
 git clean -ffdx
 
-${main_folder_scripts}/refresh_ignore_files $module_to_migrate ${c_a_path} ${a_a_path}
+${main_folder_scripts}/refresh_ignore_files $module_to_migrate ${src_collection_path} ${dest_collection_path}
 echo `git add tests/sanity/*.txt && git commit -m "Update ignore files"`
 
-python3 $main_folder_scripts/regenerare.py ${c_a_path} ${a_a_path} $module_to_migrate
+python3 $main_folder_scripts/regenerare.py ${src_collection_path} ${dest_collection_path} $module_to_migrate ${src_collection_name} ${src_collection_name}
 
-cd ${a_a_path}
+cd ${dest_collection_path}
 echo `git add meta/runtime* && git commit -m "Update runtime"`
 
-sed -i "s/community.aws.$module_to_migrate/amazon.aws.$module_to_migrate/g" plugins/modules/$module_to_migrate*
-sed -i "s/collection_name='community.aws'/collection_name='amazon.aws'/g" plugins/modules/$module_to_migrate*
+sed -i "s/$src_collection_name.$module_to_migrate/$dest_collection_name.$module_to_migrate/g" plugins/modules/$module_to_migrate*
+sed -i "s/collection_name='$src_collection_path'/collection_name='$dest_collection_path'/g" plugins/modules/$module_to_migrate*
 git add plugins/modules/$module_to_migrate*
 git commit -m "Update FQDN"
 
-python $main_folder_scripts/clean_tests.py ${a_a_path} $module_to_migrate
+python $main_folder_scripts/clean_tests.py ${dest_collection_path} ${dest_collection_name} $module_to_migrate
 echo `git add tests/integration/targets/$module_to_migrate/* && git commit -m "Remove collection reference inside the tests"`
 
 git add changelogs/fragments/migrate_$module_to_migrate.yml
@@ -77,7 +93,7 @@ echo `git add tests/sanity/*.txt && git commit -m "Update ignore files"`
 
 git push origin promote_$module_to_migrate --force
 
-cd ${c_a_path}
+cd ${src_collection_path}
 git add meta/runtime*
 git commit -m "Update runtime"
 git add changelogs/fragments/migrate_$module_to_migrate.yml
@@ -85,4 +101,4 @@ git commit -m "Add changelog fragment"
 git push origin promote_$module_to_migrate --force
 
 sleep 10
-python $main_folder_scripts/open_pr_module_migration.py $module_to_migrate promote_$module_to_migrate
+python $main_folder_scripts/open_pr_module_migration.py $module_to_migrate promote_$module_to_migrate ${src_collection_name} ${dest_collection_name}

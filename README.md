@@ -1,13 +1,17 @@
-# AWS modules migration script from community.aws to amazon.aws
+# Ansible Collection modules migration script to move between two Collections
 
 ## Usage
-Create a GitHub personal access token to use in place of a password with the API and set it within the username inside run.sh. In addition, please specify the name of the AWS module you want to migrate and the collections paths.
+Create a GitHub personal access token to use in place of a password with the API and set it within the username inside run.sh. In addition, please specify the name of the module you want to migrate and the collections paths.
+
+The below paths should correlate to the location of these collections git clone locations on your computer.
 ```bash
 export GITHUB_TOKEN="Token ..."
 export USERNAME="GitHub username"
 module_to_migrate="Module name"
-c_a_path="community.aws collection path"
-a_a_path="amazon.aws collection path"
+src_collection_name="srcnamespace.name"
+src_collection_path="source (original) collection path"
+dest_collection_name="destnamespace.name"
+dest_collection_path="destination collection path"
 ```
 
 Finally, run the script.

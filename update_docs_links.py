@@ -7,21 +7,23 @@ from utils import load_file
 
 module = sys.argv[1]
 path = sys.argv[2]
+name = sys.argv[3]
 
+dest_action_group = name.split('.')[0]
 
 def update_doc_links():
     to_be_migrated = []
     com_data = load_file(f"{path}/meta/runtime.yml")
 
-    for module_name in com_data['action_groups']['aws']:
+    for module_name in com_data['action_groups'][dest_action_group]:
         if module in module_name:
             to_be_migrated.append(module_name)
 
     docs_pr = load_file(f"{path}/.github/workflows/docs-pr.yml")
 
     for module_name in to_be_migrated:
-        docs_pr['jobs']['validate-docs']['with']['provide-link-targets'] += f"ansible_collections.amazon.aws.{module_name}_module\n"
-        docs_pr['jobs']['build-docs']['with']['provide-link-targets'] += f"ansible_collections.amazon.aws.{module_name}_module\n"
+        docs_pr['jobs']['validate-docs']['with']['provide-link-targets'] += f"ansible_collections.{name}.{module_name}_module\n"
+        docs_pr['jobs']['build-docs']['with']['provide-link-targets'] += f"ansible_collections.{name}.{module_name}_module\n"
 
     yaml = YAML(typ='rt')
     yaml.width = 4096
@@ -31,7 +33,7 @@ def update_doc_links():
     docs_push = load_file(f"{path}/.github/workflows/docs-push.yml")
 
     for module_name in to_be_migrated:
-        docs_push['jobs']['build-docs']['with']['provide-link-targets'] += f"ansible_collections.amazon.aws.{module_name}_module\n"
+        docs_push['jobs']['build-docs']['with']['provide-link-targets'] += f"ansible_collections.{name}.{module_name}_module\n"
 
     yaml = YAML(typ='rt')
     yaml.width = 4096

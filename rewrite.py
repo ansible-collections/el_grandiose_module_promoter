@@ -5,6 +5,8 @@ import os
 import sys
 import pathlib
 
+src_name = sys.argv[1]
+
 lines = sys.stdin.readlines()
 
 
@@ -20,6 +22,6 @@ for l in lines:
     sys.stdout.write(l)
 
 print(
-    "\n\nThis commit was initially merged in https://github.com/ansible-collections/community.aws"
+    f"\n\nThis commit was initially merged in https://github.com/ansible-collections/{src_name}"
 )
-print(f"See: https://github.com/ansible-collections/community.aws/commit/{pop_sha1()}")
+print(f"See: https://github.com/ansible-collections/{src_name}/commit/{pop_sha1()}")
