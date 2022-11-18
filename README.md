@@ -1,4 +1,4 @@
-# Ansible Collection modules migration script to move between two Collections
+# Ansible Collection modules migration script to move between two Collections inside the ansible-collections GitHub Org
 
 ## Usage
 Create a GitHub personal access token to use in place of a password with the API and set it within the username inside run.sh. In addition, please specify the name of the module you want to migrate and the collections paths.
