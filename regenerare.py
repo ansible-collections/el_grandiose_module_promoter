@@ -15,7 +15,7 @@ src_name = sys.argv[4]
 dest_name = sys.argv[5]
 
 
-dest_action_group = dest_name.split('.')[0]
+dest_action_group = dest_name.split('.')[1]
 
 def update_actions_group(data, to_be_migrated):
     to_be_updated = []
@@ -42,7 +42,7 @@ def add_changelog(to_be_migrated):
     changelog_to['major_changes'] = []
     changelog_from['breaking_changes'] = []
 
-    os.makedirs(f"{community_path}/changelogs/fragments", exist_ok=True)
+    os.makedirs(f"{dest_path}/changelogs/fragments", exist_ok=True)
 
     for module_name in to_be_migrated:
         _module_name = module_name
@@ -82,7 +82,7 @@ def regenerate():
     for key, value in com_data['plugin_routing']['modules'].items():
         if module in value.get('redirect'):
             li = com_data['plugin_routing']['modules'][key]
-            li['redirect'] = li['redirect'].replace("community", "amazon" )
+            li['redirect'] = li['redirect'].replace(src_name, dest_name)
             plugin_routing_to_be_added[key] = li
             _com_data_cpy['plugin_routing']['modules'].pop(key)
 

@@ -26,14 +26,6 @@ fi
 main_folder_scripts=$(pwd)
 
 cd ${src_collection_path}
-git checkout origin/main
-git checkout -B update_docs_$module_to_migrate origin/main
-python $main_folder_scripts/update_docs_links.py $module_to_migrate ${src_collection_path} ${dest_collection_name}
-git add .github/workflows
-git commit -m "Update docs links"
-git push origin update_docs_$module_to_migrate --force
-sleep 10
-python $main_folder_scripts/open_pr_docs_update.py $module_to_migrate update_docs_$module_to_migrate
 
 git checkout origin/main
 
@@ -79,7 +71,7 @@ cd ${dest_collection_path}
 echo `git add meta/runtime* && git commit -m "Update runtime"`
 
 sed -i "s/$src_collection_name.$module_to_migrate/$dest_collection_name.$module_to_migrate/g" plugins/modules/$module_to_migrate*
-sed -i "s/collection_name='$src_collection_path'/collection_name='$dest_collection_path'/g" plugins/modules/$module_to_migrate*
+sed -i "s/collection_name='$src_collection_name'/collection_name='$dest_collection_name'/g" plugins/modules/$module_to_migrate*
 git add plugins/modules/$module_to_migrate*
 git commit -m "Update FQDN"
 
