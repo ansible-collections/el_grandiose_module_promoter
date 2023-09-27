@@ -65,7 +65,7 @@ git clean -ffdx
 ${main_folder_scripts}/refresh_ignore_files $module_to_migrate ${src_collection_path} ${dest_collection_path}
 echo `git add tests/sanity/*.txt && git commit -m "Update ignore files"`
 
-python3 $main_folder_scripts/regenerate.py ${src_collection_path} ${dest_collection_path} $module_to_migrate ${src_collection_name} ${src_collection_name}
+python3 $main_folder_scripts/regenerate.py ${src_collection_path} ${dest_collection_path} $module_to_migrate ${src_collection_name} ${dest_collection_name}
 
 cd ${dest_collection_path}
 echo `git add meta/runtime* && git commit -m "Update runtime"`
