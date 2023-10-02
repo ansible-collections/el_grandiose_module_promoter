@@ -70,12 +70,12 @@ python3 $main_folder_scripts/regenerate.py ${src_collection_path} ${dest_collect
 cd ${dest_collection_path}
 echo `git add meta/runtime* && git commit -m "Update runtime"`
 
-sed -i '' "s/$src_collection_name.$module_to_migrate/$dest_collection_name.$module_to_migrate/g" plugins/modules/$module_to_migrate*
-sed -i '' "s/collection_name='$src_collection_name'/collection_name='$dest_collection_name'/g" plugins/modules/$module_to_migrate*
+sed -i "s/$src_collection_name.$module_to_migrate/$dest_collection_name.$module_to_migrate/g" plugins/modules/$module_to_migrate*
+sed -i "s/collection_name='$src_collection_name'/collection_name='$dest_collection_name'/g" plugins/modules/$module_to_migrate*
 git add plugins/modules/$module_to_migrate*
 git commit -m "Update FQDN"
 
-sed -i '' "s/from ansible_collections.community.aws.plugins.module_utils.modules import AnsibleCommunityAWSModule as AnsibleAWSModule/from ansible_collections.amazon.aws.plugins.module_utils.modules import AnsibleAWSModule/g" plugins/modules/$module_to_migrate*
+sed -i "s/from ansible_collections.community.aws.plugins.module_utils.modules import AnsibleCommunityAWSModule as AnsibleAWSModule/from ansible_collections.amazon.aws.plugins.module_utils.modules import AnsibleAWSModule/g" plugins/modules/$module_to_migrate*
 echo `git add plugins/modules/$module_to_migrate* && git commit -m "Update AnsibleAWSModule import path"`
 
 python $main_folder_scripts/clean_tests.py ${dest_collection_path} ${dest_collection_name} $module_to_migrate
