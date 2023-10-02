@@ -88,10 +88,13 @@ def regenerate():
 
     if action_groups_to_be_added:
         _am_data_cpy['action_groups'][dest_action_group].extend(action_groups_to_be_added)
+        _am_data_cpy['action_groups'][dest_action_group].sort()
         _com_data_cpy = update_actions_group(com_data, action_groups_to_be_added)
 
     if plugin_routing_to_be_added:
         _am_data_cpy['plugin_routing']['modules'].update(plugin_routing_to_be_added)
+        _am_data_cpy['plugin_routing']['modules']= dict(sorted(_am_data_cpy['plugin_routing']['modules'].items()))
+        _am_data_cpy['action_groups'][dest_action_group].sort()
 
     _com_data_cpy = update_plugin_routing(com_data, action_groups_to_be_added)
 

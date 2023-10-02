@@ -11,7 +11,11 @@ def load_file(file):
 
 def dump_to_file(data, path):
     with open(path, 'w') as yaml_file:
-        ruamel.yaml.dump(data, yaml_file, Dumper=ruamel.yaml.RoundTripDumper)
+        yaml = ruamel.yaml.YAML()
+        yaml.preserve_quotes = True
+        yaml.indent(mapping=2, sequence=4, offset=2)
+        yaml.explicit_start = True
+        yaml.dump(data, yaml_file)
 
 
 def list_pull_request(owner_name, repo_name, git_token, pr_title):
@@ -25,7 +29,7 @@ def list_pull_request(owner_name, repo_name, git_token, pr_title):
         "Authorization": "token {0}".format(git_token),
         "Content-Type": "application/json"
     }
-    
+
     for _i in range(30):
         response = requests.get(
             git_pulls_api,
