@@ -1,0 +1,7 @@
+---
+migration_modules:
+  - ec2_ami_copy
+  - acm_certificate
+  - acm_certificate_info
+migration_src_path: /home/aubin/work/common/community.aws/
+migration_dst_path: /home/aubin/work/common/amazon.aws/

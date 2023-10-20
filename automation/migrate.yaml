@@ -1,0 +1,258 @@
+- name: Migrate modules between ansible collections
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Fail when source collection path is not provided
+      ansible.builtin.fail:
+        msg: "Source collection path is required, please set 'migration_src_path'"
+      when: migration_src_path is undefined
+
+    - name: Fail when destination collection path is not provided
+      ansible.builtin.fail:
+        msg: "Destination collection path is required, please set 'migration_dst_path'"
+      when: migration_dst_path is undefined
+
+    - name: Expand user on src collection name
+      ansible.builtin.set_fact:
+        test_src_path: "{{ migration_src_path | expanduser }}"
+
+    - name: Expand user on dest collection name
+      ansible.builtin.set_fact:
+        test_dst_path: "{{ migration_dst_path | expanduser }}"
+
+    - name: Validate collections
+      ansible.builtin.include_tasks: tasks/validate_collection.yaml
+      with_items:
+        - "{{ test_src_path }}"
+        - "{{ test_dst_path }}"
+
+    - name: Set source collection name
+      ansible.builtin.set_fact:
+        migration_src_repo_name: "{{ migration_src_repo_name | default('community.aws') }}"
+
+    - name: Set destination collection name
+      ansible.builtin.set_fact:
+        migration_dst_repo_name: "{{ migration_dst_repo_name | default('amazon.aws') }}"
+
+    - name: Ensure Github token is defined
+      ansible.builtin.fail:
+        msg: "Please define GH_TOKEN environment variable"
+      when: lookup('env', 'GH_TOKEN') == ''
+
+    - name: Ensure Github username is defined
+      ansible.builtin.fail:
+        msg: "Please define GH_USERNAME environment variable"
+      when: lookup('env', 'GH_USERNAME') == ''
+
+    - name: Fail when the module to migrate is undefined
+      ansible.builtin.fail:
+        msg: "Module(s) to migrate should be defined using 'migration_modules'"
+      when: migration_modules is undefined
+
+    - name: Convert 'modules_to_migrate' as a list
+      ansible.builtin.set_fact:
+        modules_to_migrate: "{{ migration_modules | split(',') }}"
+      when: migration_modules | type_debug == "str"
+
+    - name: Set 'modules_to_migrate'
+      ansible.builtin.set_fact:
+        modules_to_migrate: "{{ migration_modules }}"
+      when: migration_modules | type_debug == "list"
+
+    - name: Identify source collection
+      identify_collection:
+        path: "{{ test_src_path }}"
+      register: src_collection_info
+
+    - name: Identify destination collection
+      identify_collection:
+        path: "{{ test_dst_path }}"
+      register: dst_collection_info
+
+    - name: Create branch name
+      block:
+        - name: Generate branch name
+          generate_branch_name:
+          register: _generate
+
+        - name: Set variable
+          ansible.builtin.set_fact:
+            migration_branch: "{{ _generate.name }}"
+
+      when: migration_branch is undefined
+
+    - name: Define common variables
+      ansible.builtin.set_fact:
+        src_collection_name: "{{ src_collection_info.namespace ~ '.' ~ src_collection_info.name }}"
+        dst_collection_name: "{{ dst_collection_info.namespace ~ '.' ~ dst_collection_info.name }}"
+        tests_to_migrate: "{{ (tmp_tests == '') | bool | ternary([], tmp_tests | split(',')) }}"
+      vars:
+        tmp_tests: "{{ migration_tests | default('') }}"
+
+    - name: 'Add upstream URL'
+      ansible.builtin.shell:
+        cmd: |
+          git remote add upstream https://github.com/ansible-collections/{{ item.repo }}
+          git fetch upstream main
+        chdir: '{{ item.path }}'
+      with_items:
+        - path: '{{ test_src_path }}'
+          repo: '{{ migration_src_repo_name }}'
+        - path: '{{ test_dst_path }}'
+          repo: '{{ migration_dst_repo_name }}'
+
+    - name: Create migration branch on source repository
+      ansible.builtin.shell:
+        chdir: "{{ test_src_path }}"
+        cmd: |
+          git checkout upstream/main
+          git checkout -B {{ migration_branch }} upstream/main
+
+    - name: Create patch from source collection
+      create_patches:
+        collection_name: "{{ src_collection_name }}"
+        branch: "{{ migration_branch }}"
+        modules: "{{ modules_to_migrate }}"
+        integration_tests: "{{ tests_to_migrate }}"
+        path: "{{ test_src_path }}"
+      register: patches
+
+    # create branch on destination repository
+    - name: Create branch on destination repository
+      ansible.builtin.shell:
+        chdir: "{{ test_dst_path }}"
+        cmd: |
+          git am --abort || true
+          git checkout -B {{ migration_branch }} upstream/main
+
+    - name: Apply the patch to the destination collection
+      apply_patches:
+        path: "{{ test_dst_path }}"
+        patches: "{{ patches.files }}"
+
+    - name: Remove files from source collection
+      remove_modules:
+        path: "{{ test_src_path }}"
+        branch: "{{ migration_branch }}"
+        modules: "{{ modules_to_migrate }}"
+        integration_tests: "{{ tests_to_migrate }}"
+
+    - name: Refresh ignore files
+      refresh_ignore_files:
+        modules: "{{ modules_to_migrate }}"
+        integration_tests: "{{ tests_to_migrate }}"
+        src: "{{ test_src_path }}"
+        dest: "{{ test_dst_path }}"
+      register: _refresh
+
+    - name: 'Add sanity file for collection {{ item }}'
+      ansible.builtin.shell:
+        chdir: "{{ item }}"
+        cmd: 'git add tests/sanity/*.txt'
+      with_items:
+        - '{{ test_dst_path }}'
+        - '{{ test_src_path }}'
+      when: _refresh is changed
+
+    - name: Update meta/runtime and add changelog
+      update_meta_runtime:
+        src:  "{{ test_src_path }}"
+        dest: "{{ test_dst_path }}"
+        modules: "{{ modules_to_migrate }}"
+        src_name: "{{ src_collection_name }}"
+        dest_name: "{{ dst_collection_name }}"
+
+    - name: Update FQDN from destination collection
+      update_modules:
+        path: "{{ test_dst_path }}"
+        modules: "{{ modules_to_migrate }}"
+        src_name: "{{ src_collection_name }}"
+        dest_name: "{{ dst_collection_name }}"
+
+    - name: git Add updated modules
+      ansible.builtin.shell:
+        chdir: "{{ test_dst_path }}"
+        cmd: git add plugins/modules/*
+
+    - name: Update integration tests targets
+      update_tests:
+        collection_path: "{{ test_dst_path }}"
+        collection_name: "{{ dst_collection_name }}"
+        targets: "{{ modules_to_migrate + tests_to_migrate }}"
+      register: _update_tests
+
+    - name: Stage updated integration tests
+      ansible.builtin.shell:
+        chdir: "{{ test_dst_path }}"
+        cmd: 'git add tests/integration/targets/*'
+      when: _update_tests is changed
+
+    # commit and push from collections
+    - name: "Commit changes and push from collection {{ item }}"
+      ansible.builtin.shell:
+        chdir: "{{ item.path }}"
+        cmd: |
+          git add meta/runtime*
+          git add changelogs/fragments/*.yml
+          git commit -m "Promote modules {{ modules_to_migrate | join(',') }}: Update runtime, add changelog fragment, clean tests"
+          git remote set-url origin https://{{ gh_username }}:{{ gh_token }}@github.com/{{ gh_username }}/{{ item.repo }}
+          git push origin {{ migration_branch }} --force
+      with_items:
+        - path: "{{ test_dst_path }}"
+          repo: "{{ migration_dst_repo_name }}"
+        - path: "{{ test_src_path }}"
+          repo: "{{ migration_src_repo_name }}"
+      vars:
+        gh_username: "{{ lookup('env', 'GH_USERNAME') }}"
+        gh_token: "{{ lookup('env', 'GH_TOKEN') }}"
+
+    - name: Wait for branch to be available on Github
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: 'Create pull request from repository {{ migration_dst_repo_name }}'
+      create_pr:
+        token: "{{ lookup('env', 'GH_TOKEN') }}"
+        repository:
+          name: "ansible-collections/{{ migration_dst_repo_name }}"
+        fork:
+          owner: "{{ lookup('env', 'GH_USERNAME') }}"
+          branch: "{{ migration_branch }}"
+        title: "DNM - Migrate modules `{{ modules_to_migrate | join(' ') }}` and tests"
+        body: |
+          ##### SUMMARY
+          - Migrate modules `{{ modules_to_migrate | join(' ') }}` and corresponding tests.
+          - These modules have been removed from `{{ src_collection_name }}`.
+          - Update ignore files.
+
+          ##### ISSUE TYPE
+          - New modules Pull Request
+
+          ##### MODULES
+          `{{ modules_to_migrate | join(' ') }}`
+      register: _pullreq
+
+    - name: 'Create pull request from repository {{ migration_src_repo_name }}'
+      create_pr:
+        token: "{{ lookup('env', 'GH_TOKEN') }}"
+        repository:
+          name: "ansible-collections/{{ migration_src_repo_name }}"
+        fork:
+          owner: "{{ lookup('env', 'GH_USERNAME') }}"
+          branch: "{{ migration_branch }}"
+        title: "DNM - Migrate modules `{{ modules_to_migrate | join(' ') }}` and tests"
+        body: |
+          Depends-On: {{ _pullreq.url }}
+
+          ##### SUMMARY
+          - Remove modules `{{ modules_to_migrate | join(' ') }}` and corresponding tests.
+          - These modules have been migrated to `{{ dst_collection_name }}`.
+          - Update runtime.yml with redirects to that collection.
+          - Update ignore files
+
+          ##### ISSUE TYPE
+          - Remove modules Pull Request
+
+          ##### MODULES
+          `{{ modules_to_migrate | join(' ') }}`

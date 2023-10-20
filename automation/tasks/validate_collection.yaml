@@ -1,0 +1,20 @@
+---
+- name: Ensure collection path is a valid directory
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: _statd
+
+- name: Fail when collection path is not a valid directory
+  ansible.builtin.fail:
+    msg: "The following path does not exist or is not a valid directory"
+  when: (not _statd.stat.exists) or (not _statd.stat.isdir)
+
+- name: Ensure collection contains galaxy file
+  ansible.builtin.stat:
+    path: "{{ item }}/galaxy.yml"
+  register: _statf
+
+- name: Fail when collection does not contains valid galaxy.yml file
+  ansible.builtin.fail:
+    msg: "The following {{ item }}/galaxy.yml is not a valid galaxy file"
+  when: (not _statf.stat.exists) or (not _statf.stat.isreg) or (_statf.stat.size == 0)
