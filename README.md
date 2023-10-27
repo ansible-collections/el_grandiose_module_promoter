@@ -1,23 +1,43 @@
-# Ansible Collection modules migration script to move between two Collections inside the ansible-collections GitHub Org
+# Ansible Collection modules migration tool to move between two Collections inside the ansible-collections GitHub Org
 
-## Usage
-Create a GitHub personal access token to use in place of a password with the API and set it within the username inside run.sh. In addition, please specify the name of the module you want to migrate and the collections paths.
+## Requirements
 
-The below paths should correlate to the location of these collections git clone locations on your computer.
+- Create a GitHub personal access token to use in place of a password with the API.
+- Collections forks exist in the user namespace.
+
+
+## Using Github action
+
+From the [repository](https://github.com/ansible-collections/el_grandiose_module_promoter)
+
+- Click on ![action](https://github.com/ansible-collections/el_grandiose_module_promoter/blob/main/images/action.jpg?raw=true)
+
+- Choose the action named ``migrate_modules``
+
+- Click on ![run workflow](https://github.com/ansible-collections/el_grandiose_module_promoter/blob/main/images/run_workflow.jpg?raw=true)
+
+- Fill the form the required parameters and click on ![run workflow](https://github.com/ansible-collections/el_grandiose_module_promoter/blob/main/images/execute_workflow.jpg.jpg?raw=true)
+
+## Usage (on your local computer)
+
+- clone the collection containing the modules to migrate (``community.aws``)
 ```bash
-export GITHUB_TOKEN="Token ..."
-export USERNAME="GitHub username"
-module_to_migrate="Module name"
-src_collection_name="srcnamespace.name"
-src_collection_path="source (original) collection path"
-dest_collection_name="destnamespace.name"
-dest_collection_path="destination collection path"
+git clone https://github.com/{username}/community.aws path_to_clone_community_aws
 ```
 
-Finally, run the script.
+- clone the collection where the modules will be migrated (``amazon.aws``)
 ```bash
-$ ./run.sh
+git clone https://github.com/{username}/amazon.aws path_to_clone_amazon_aws
 ```
+
+- Set environment variables for Github token and username
+```bash
+export GH_TOKEN=abcdefgh....
+export GH_USERNAME=username
+```
+
+- Run the automation playbook as described [here](https://github.com/ansible-collections/el_grandiose_module_promoter/blob/main/automation/README.md)
+
 
 ## License
 

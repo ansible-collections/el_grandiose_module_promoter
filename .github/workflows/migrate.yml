@@ -1,0 +1,118 @@
+---
+name: migrate_modules
+
+on:
+  workflow_dispatch:
+    inputs:
+      token:
+        description: A personal Github token to use to create/list pull request
+        required: true
+      modules:
+        description: Comma-separated list of modules to migrate
+        required: true
+        type: string
+      integration_tests:
+        description: Comma-separated list of integration tests to migrate.
+        type: string
+        default: ""
+      src:
+        description: |
+          The Github repository source, user must have a repository with this name.
+          Please do not specify repository owner, we consider the user running this
+          workflow as the owner.
+        required: false
+        default: 'community.aws'
+      dest:
+        description: |
+          The Github repository destination, user must have a repository with this name.
+          Please do not specify repository owner, we consider the user running this
+          workflow as the owner.
+        required: false
+        default: "amazon.aws"
+      prefix:
+        description: The prefix name for branch to create for migration.
+        required: false
+        default: "promote"
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    name: Migrate modules from community
+    env:
+      GH_TOKEN: ${{ inputs.token }}
+      GH_USERNAME: ${{ github.actor }}
+      GH_EMAIL: "41898282+github-actions[bot]@users.noreply.github.com"
+      PY_COLORS: "1"
+      promoter_path: "./promoter"
+      source_path: "source"
+      destination_path: "destination"
+    steps:
+      - name: Hide the inputs values to keep them private in the logs when running this workflow
+        uses: levibostian/action-hide-sensitive-inputs@v1
+        with:
+          exclude_inputs: "module,src,dest,prefix"
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install ansible-core
+        run: >
+          python3 -m pip install
+          https://github.com/ansible/ansible/archive/milestone.tar.gz
+          --disable-pip-version-check
+
+      - name: Install python required libraries
+        run: pip install -U pygithub 'ruamel.yaml==0.17.33'
+        shell: bash
+
+      # checkout el_grandiose_module_promoter
+      - name: Checkout the repository el_grandiose_module_promoter
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          repository: abikouo/el_grandiose_module_promoter
+          ref: automation_1
+          path: ${{ env.promoter_path }}
+
+      # checkout source repository
+      - name: Checkout the source collection
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          repository: "${{ github.actor }}/${{ inputs.src }}"
+          path: "${{ env.source_path }}"
+          fetch-depth: "0"
+
+      # checkout destination repository
+      - name: Checkout the destination collection
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+          repository: "${{ github.actor }}/${{ inputs.dest }}"
+          path: "${{ env.destination_path }}"
+          fetch-depth: "0"
+
+      # Git configuration
+      - name: Set global git configuration
+        run: |
+          git config --global user.email "${{ env.GH_EMAIL }}"
+          git config --global user.name "${{ env.GH_USERNAME }}"
+        shell: bash
+        working-directory: ${{ env.promoter_path }}
+
+      # Run playbook
+      - name: Run playbook to migrate modules
+        run: >
+          ansible-playbook ./migrate.yaml 
+          -e "migration_tests=${{ inputs.integration_tests }}"
+          -e "migration_modules=${{ inputs.modules }}"
+          -e "migration_src_path=${GITHUB_WORKSPACE}/${{ env.source_path }}"
+          -e "migration_dst_path=${GITHUB_WORKSPACE}/${{ env.destination_path }}"
+          -e "branch_prefix=${{ inputs.prefix }}"
+          -e "migration_src_repo_name=${{ inputs.src }}"
+          -e "migration_dst_repo_name=${{ inputs.dest }}"
+          -v
+        shell: bash
+        working-directory: '${{ env.promoter_path }}/automation'
