@@ -6,7 +6,9 @@ import ruamel.yaml
 
 def load_file(file):
     with open(file, 'r') as _f:
-        return ruamel.yaml.round_trip_load(_f.read(), preserve_quotes=True)
+        yaml = ruamel.yaml.YAML()
+        yaml.preserve_quotes = True
+        return yaml.load(_f.read())
 
 
 def dump_to_file(data, path):

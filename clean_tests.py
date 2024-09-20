@@ -10,14 +10,13 @@ module = sys.argv[3]
 
 
 def load_file(path):
-    data = ruamel.yaml.load(open(path), Loader=ruamel.yaml.RoundTripLoader)
-
-    return data
+    return ruamel.yaml.YAML().load(open(path))
 
 
 def dump_to_file(data, path):
     with open(path, 'w') as yaml_file:
-        ruamel.yaml.dump(data, yaml_file, Dumper=ruamel.yaml.RoundTripDumper)
+        yaml = ruamel.yaml.YAML()
+        yaml.dump(data, yaml_file)
 
 
 def get_files():
